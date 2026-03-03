@@ -87,11 +87,12 @@ class TournamentGroupScrapper
                 $registrations = (int)$matches[1];
             }
 
+            $groupName = (string)($textGroup[1] ?? '');
             /** @var string $name */
-            $name = preg_replace('/\d+$/', '', $textGroup[1]);
+            $name = ($groupName !== '') ? trim((string)preg_replace('/\d+$/', '', $groupName)) : '';
             $outGroups[] = new TournamentGroupDto(
                 (int)$textGroup[0],
-                rtrim($name),
+                $name,
                 $registrations
             );
         }

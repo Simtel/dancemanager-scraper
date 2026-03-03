@@ -8,7 +8,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Symfony\Component\DomCrawler\Crawler;
 
-final class DancemanagerScraper
+class DancemanagerScraper
 {
     protected string $baseUrl = 'https://dancemanager.ru';
 
@@ -166,14 +166,14 @@ final class DancemanagerScraper
      * @return array{start: string|null, end: string|null}
      * @throws GuzzleException
      */
-    private function extractDatesFromCompetitionPage(string $url): array
+    public function extractDatesFromCompetitionPage(string $url): array
     {
         try {
             $response = $this->client->get($url);
             $html = $response->getBody()->getContents();
             $crawler = new Crawler($html);
 
-            $content = $crawler->filter('body')->text();
+            $content = $crawler->filter('body')->html();
 
             $monthMap = [
                 'января' => '01',
@@ -222,7 +222,7 @@ final class DancemanagerScraper
      * @param string $input
      * @return array{city: string, organizer: string}
      */
-    private function splitLocationAndName(string $input): array
+    public function splitLocationAndName(string $input): array
     {
         $parts = explode(',', $input, 2);
 
