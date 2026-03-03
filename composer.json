@@ -1,0 +1,29 @@
+{
+  "name": "simtel/dancemanager-scraper",
+  "description": "Scraper tournaments and groups from dancemanager.ru",
+  "license": ["MIT"],
+  "authors": [
+    {
+      "name": "Simtel",
+      "email": "simuls@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">8.3",
+    "guzzlehttp/guzzle": "^7.0.1",
+    "symfony/dom-crawler": "^7.0",
+    "psr/cache": "*",
+    "psr/log": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Simtel\\DanceManagerScraper\\": "src/",
+      "Simtel\\DanceManagerScraper\\Tests\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^12.0",
+    "laravel/pint": "^1.2",
+    "phpstan/phpstan": "^2.0"
+  }
+}

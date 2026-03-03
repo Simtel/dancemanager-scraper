@@ -1,0 +1,12 @@
+{
+  "preset": "psr12",
+  "exclude": [
+    ".github",
+    ".docker"
+  ],
+  "rules": {
+    "declare_strict_types": true,
+    "no_unused_imports": true,
+    "static_lambda": true
+  }
+}
