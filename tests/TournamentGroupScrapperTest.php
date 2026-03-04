@@ -6,7 +6,6 @@ namespace Simtel\DanceManagerScraper\Tests;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
-use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\NullLogger;
 use Simtel\DanceManagerScraper\Tournament;
 use Simtel\DanceManagerScraper\TournamentGroupDto;
@@ -68,7 +67,7 @@ HTML;
 
         $client->expects(self::exactly(3))
             ->method('get')
-            ->willReturnCallback(function (string $url) use ($tournamentPageHtml, $partPageHtml) {
+            ->willReturnCallback(static function (string $url) use ($tournamentPageHtml, $partPageHtml) {
                 if (str_contains($url, 'competitions?guid=')) {
                     return new Response(200, [], $tournamentPageHtml);
                 }

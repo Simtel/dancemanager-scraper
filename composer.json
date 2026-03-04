@@ -9,9 +9,9 @@
     }
   ],
   "require": {
-    "php": ">8.3",
+    "php": ">=8.5",
     "guzzlehttp/guzzle": "^7.0.1",
-    "symfony/dom-crawler": "^7.0",
+    "symfony/dom-crawler": "^8.0",
     "psr/cache": "*",
     "psr/log": "*"
   },
