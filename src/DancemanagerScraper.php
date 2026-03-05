@@ -17,12 +17,17 @@ class DancemanagerScraper
     }
 
     /**
-     * @return list<array{title: string, date: mixed, date_end: mixed, link: non-falsy-string, city: ?string, organizer: ?string}>
+     * @return list<TournamentDto>
      * @throws GuzzleException
      */
     public function getTournaments(): array
     {
-        return $this->fetchTournaments();
+        $tournamentsArrays = $this->fetchTournaments();
+
+        return array_map(
+            static fn (array $data): TournamentDto => TournamentDto::fromArray($data),
+            $tournamentsArrays
+        );
     }
 
     /**

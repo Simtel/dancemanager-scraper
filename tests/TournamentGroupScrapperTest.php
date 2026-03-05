@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Simtel\DanceManagerScraper\Tests;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Response;
 use Psr\Log\NullLogger;
-use Simtel\DanceManagerScraper\Tournament;
+use Simtel\DanceManagerScraper\TournamentDto;
 use Simtel\DanceManagerScraper\TournamentGroupDto;
 use Simtel\DanceManagerScraper\TournamentGroupScrapper;
 
@@ -27,6 +28,9 @@ class TournamentGroupScrapperTest extends BaseTestCase
         self::assertInstanceOf(TournamentGroupScrapper::class, $this->scrapper);
     }
 
+    /**
+     * @throws GuzzleException
+     */
     public function testGetGroupsWithEmptyResponse(): void
     {
         $html = '<html><body>No groups</body></html>';
@@ -34,13 +38,23 @@ class TournamentGroupScrapperTest extends BaseTestCase
         $client->method('get')->willReturn(new Response(200, [], $html));
 
         $scrapper = new TournamentGroupScrapper($client, new NullLogger());
-        $tournament = new Tournament('https://example.com?guid=123', '123');
+        $tournament =  $tournament = new TournamentDto(
+            'Tournament',
+            '2026-03-01',
+            '2026-03-01',
+            'https://example.com/competitions?guid=123',
+            'Moscow',
+            'Organizer'
+        );
 
         $result = $scrapper->getGroups($tournament);
 
         self::assertEmpty($result);
     }
 
+    /**
+     * @throws GuzzleException
+     */
     public function testGetGroupsParsesGroupsCorrectly(): void
     {
         $tournamentPageHtml = <<<'HTML'
@@ -61,11 +75,9 @@ HTML;
 </html>
 HTML;
 
-        $client = self::getMockBuilder(Client::class)
-            ->onlyMethods(['get'])
-            ->getMock();
+        $client = $this->createStub(Client::class);
 
-        $client->expects(self::exactly(3))
+        $client
             ->method('get')
             ->willReturnCallback(static function (string $url) use ($tournamentPageHtml, $partPageHtml) {
                 if (str_contains($url, 'competitions?guid=')) {
@@ -76,7 +88,14 @@ HTML;
             });
 
         $scrapper = new TournamentGroupScrapper($client, new NullLogger());
-        $tournament = new Tournament('https://example.com/competitions?guid=123', '123');
+        $tournament = new TournamentDto(
+            'Tournament',
+            '2026-03-01',
+            '2026-03-01',
+            'https://example.com/competitions?guid=123',
+            'Moscow',
+            'Organizer'
+        );
 
         $result = $scrapper->getGroups($tournament);
 

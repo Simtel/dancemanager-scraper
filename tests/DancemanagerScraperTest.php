@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Simtel\DanceManagerScraper\Tests;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Response;
 use Simtel\DanceManagerScraper\DancemanagerScraper;
 
@@ -40,6 +41,9 @@ class DancemanagerScraperTest extends BaseTestCase
         self::assertSame('', $result['organizer']);
     }
 
+    /**
+     * @throws GuzzleException
+     */
     public function testExtractDatesFromCompetitionPageWithTwoDates(): void
     {
         $html = "<body>15.02.2024<br>\n17.02.2024</body>";
@@ -53,6 +57,9 @@ class DancemanagerScraperTest extends BaseTestCase
         self::assertNotEmpty($result['end']);
     }
 
+    /**
+     * @throws GuzzleException
+     */
     public function testExtractDatesFromCompetitionPageWithSingleDate(): void
     {
         $html = '<body>Контент с датой 25.12.2024</body>';
@@ -65,6 +72,9 @@ class DancemanagerScraperTest extends BaseTestCase
         self::assertNotEmpty($result['start']);
     }
 
+    /**
+     * @throws GuzzleException
+     */
     public function testExtractDatesFromCompetitionPageWithRussianMonth(): void
     {
         $html = '<body>Контент с датой 15 марта 2024 года</body>';

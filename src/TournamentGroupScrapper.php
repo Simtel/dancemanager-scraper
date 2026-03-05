@@ -32,11 +32,11 @@ class TournamentGroupScrapper
 
 
     /**
-     * @param Tournament $tournament
+     * @param TournamentDto $tournament
      * @return TournamentGroupDto[]
      * @throws GuzzleException
      */
-    public function getGroups(Tournament $tournament): array
+    public function getGroups(TournamentDto $tournament): array
     {
         $response = $this->client->get($tournament->getLink());
         $html = $response->getBody()->getContents();
