@@ -13,7 +13,7 @@ class DancemanagerScraperTest extends BaseTestCase
 {
     public function testSplitLocationAndNameWithBothValues(): void
     {
-        $client = $this->createMock(Client::class);
+        $client = $this->createStub(Client::class);
         $scraper = new DancemanagerScraper($client);
         $result = $scraper->splitLocationAndName('Москва, Организатор');
 
@@ -23,7 +23,7 @@ class DancemanagerScraperTest extends BaseTestCase
 
     public function testSplitLocationAndNameWithOnlyCity(): void
     {
-        $client = $this->createMock(Client::class);
+        $client = $this->createStub(Client::class);
         $scraper = new DancemanagerScraper($client);
         $result = $scraper->splitLocationAndName('Санкт-Петербург');
 
@@ -33,7 +33,7 @@ class DancemanagerScraperTest extends BaseTestCase
 
     public function testSplitLocationAndNameWithEmptyString(): void
     {
-        $client = $this->createMock(Client::class);
+        $client = $this->createStub(Client::class);
         $scraper = new DancemanagerScraper($client);
         $result = $scraper->splitLocationAndName('');
 
@@ -47,7 +47,7 @@ class DancemanagerScraperTest extends BaseTestCase
     public function testExtractDatesFromCompetitionPageWithTwoDates(): void
     {
         $html = "<body>15.02.2024<br>\n17.02.2024</body>";
-        $client = $this->createMock(Client::class);
+        $client = $this->createStub(Client::class);
         $client->method('get')->willReturn(new Response(200, [], $html));
 
         $scraper = new DancemanagerScraper($client);
@@ -63,7 +63,7 @@ class DancemanagerScraperTest extends BaseTestCase
     public function testExtractDatesFromCompetitionPageWithSingleDate(): void
     {
         $html = '<body>Контент с датой 25.12.2024</body>';
-        $client = $this->createMock(Client::class);
+        $client = $this->createStub(Client::class);
         $client->method('get')->willReturn(new Response(200, [], $html));
 
         $scraper = new DancemanagerScraper($client);
@@ -78,7 +78,7 @@ class DancemanagerScraperTest extends BaseTestCase
     public function testExtractDatesFromCompetitionPageWithRussianMonth(): void
     {
         $html = '<body>Контент с датой 15 марта 2024 года</body>';
-        $client = $this->createMock(Client::class);
+        $client = $this->createStub(Client::class);
         $client->method('get')->willReturn(new Response(200, [], $html));
 
         $scraper = new DancemanagerScraper($client);

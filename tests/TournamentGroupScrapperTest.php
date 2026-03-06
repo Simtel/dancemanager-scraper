@@ -19,7 +19,7 @@ class TournamentGroupScrapperTest extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $client = $this->createMock(Client::class);
+        $client = $this->createStub(Client::class);
         $this->scrapper = new TournamentGroupScrapper($client, new NullLogger());
     }
 
@@ -34,7 +34,7 @@ class TournamentGroupScrapperTest extends BaseTestCase
     public function testGetGroupsWithEmptyResponse(): void
     {
         $html = '<html><body>No groups</body></html>';
-        $client = $this->createMock(Client::class);
+        $client = $this->createStub(Client::class);
         $client->method('get')->willReturn(new Response(200, [], $html));
 
         $scrapper = new TournamentGroupScrapper($client, new NullLogger());
