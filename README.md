@@ -33,15 +33,20 @@ $scraper = new DancemanagerScraper($client);
 $tournaments = $scraper->getTournaments();
 
 foreach ($tournaments as $tournament) {
-    echo $tournament['title'] . ' - ' . $tournament['date'] . "\n";
+    echo $tournament->getTitle() . ' - ' . $tournament->getDate() . "\n";
+    echo '  Город: ' . $tournament->getCity() . "\n";
+    echo '  Организатор: ' . $tournament->getOrganizer() . "\n";
 }
 
 // Получение групп турнира
 $groupScraper = new TournamentGroupScrapper($client);
-$groups = $groupScraper->getGroups($tournament);
 
-foreach ($groups as $group) {
-    echo $group->getName() . ': ' . $group->getRegistrations() . ' участников' . "\n";
+foreach ($tournaments as $tournament) {
+    $groups = $groupScraper->getGroups($tournament);
+
+    foreach ($groups as $group) {
+        echo $group->getName() . ': ' . $group->getRegistrations() . ' участников' . "\n";
+    }
 }
 ```
 
