@@ -9,3 +9,6 @@ pint: ##Run pint analyse
 
 install:
 	compsoer instal
+
+test-coverage: ## Run PHPUnit tests with coverage
+	XDEBUG_MODE=coverage ./vendor/bin/phpunit --coverage-html build/coverage/html --coverage-text
