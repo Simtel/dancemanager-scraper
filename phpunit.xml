@@ -17,8 +17,8 @@
     </testsuites>
     <coverage>
         <report>
-            <html outputDirectory=".build/coverage/html"/>
-            <text outputFile=".build/coverage.txt"/>
+            <html outputDirectory="./.build/coverage/html"/>
+            <text outputFile="./.build/coverage.txt"/>
         </report>
     </coverage>
     <php>
