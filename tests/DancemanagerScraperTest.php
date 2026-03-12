@@ -355,4 +355,57 @@ HTML;
         self::assertCount(1, $result);
         self::assertSame('N/A', $result[0]->getDate());
     }
+
+
+    /**
+     * @throws GuzzleException
+     */
+    public function testGetTournamentsParsesMultiplePages(): void
+    {
+        $mainPageHtml = <<<'HTML'
+<html><body>
+<div id="event_abc123">Турнир по танцам</div>
+<div>Москва, Организатор ООО</div>
+<li class="page-item"><a class="page-link" href="https://dancemanager.ru/?page1=2">»</a></li>
+</body></html>
+HTML;
+
+        $secondPageHtml = <<<'HTML'
+<html><body>
+<div id="event_abc321">Турнир по танцам Динамо</div>
+<div>Красногорск, Организатор ООО</div>
+</body></html>
+HTML;
+
+        $competitionPageHtml = '<body>Дата: 15.03.2024</body>';
+
+        $client = $this->createMock(Client::class);
+        $client->expects(self::exactly(4))
+            ->method('get')
+            ->willReturnCallback(static function (string $url) use ($mainPageHtml, $competitionPageHtml, $secondPageHtml) {
+                if ($url === 'https://dancemanager.ru') {
+                    return new Response(200, [], $mainPageHtml);
+                }
+                if (str_contains($url, '/competitions?guid=')) {
+                    return new Response(200, [], $competitionPageHtml);
+                }
+                if (str_contains($url, '/?page1=')) {
+                    return new Response(200, [], $secondPageHtml);
+                }
+                throw new \RuntimeException("Unexpected URL: $url");
+            });
+
+        $scraper = new DancemanagerScraper($client);
+        $result = $scraper->getTournaments();
+
+        self::assertCount(2, $result);
+        self::assertSame('Турнир по танцам', $result[0]->getTitle());
+        self::assertSame('15.03.2024', $result[0]->getDate());
+        self::assertSame('Москва', $result[0]->getCity());
+        self::assertSame('Организатор ООО', $result[0]->getOrganizer());
+        self::assertSame('Турнир по танцам Динамо', $result[1]->getTitle());
+        self::assertSame('15.03.2024', $result[1]->getDate());
+        self::assertSame('Красногорск', $result[1]->getCity());
+        self::assertSame('Организатор ООО', $result[1]->getOrganizer());
+    }
 }
