@@ -15,6 +15,14 @@
 
 ## Установка
 
+### В качестве зависимости в свой проект
+
+```bash
+composer require simtel/dancemanager-scraper
+```
+
+### Для разработки
+
 ```bash
 composer install
 ```
