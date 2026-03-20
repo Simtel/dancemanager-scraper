@@ -1,5 +1,5 @@
 test: ##Run PHPUnit tests
-	./vendor/bin/phpunit --display-errors
+	./vendor/bin/phpunit --display-errors --no-coverage
 
 phpstan: ##Run phpstan analyse
 	./vendor/bin/phpstan analyse --memory-limit=2G

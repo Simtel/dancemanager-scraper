@@ -8,16 +8,27 @@
       "email": "simuls@gmail.com"
     }
   ],
+  "keywords": ["scraper", "dance", "tournament", "dancemanager"],
+  "support": {
+    "issues": "https://github.com/simtel/dancemanager-scraper/issues",
+    "source": "https://github.com/simtel/dancemanager-scraper"
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
   "require": {
-    "php": ">=8.4",
+    "php": ">=8.2",
     "guzzlehttp/guzzle": "^7.0.1",
-    "symfony/dom-crawler": "^8.0",
-    "psr/cache": "*",
-    "psr/log": "*"
+    "symfony/dom-crawler": "^7.4",
+    "psr/cache": "^3.0",
+    "psr/log": "^3.0"
   },
   "autoload": {
     "psr-4": {
-      "Simtel\\DanceManagerScraper\\": "src/",
+      "Simtel\\DanceManagerScraper\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
       "Simtel\\DanceManagerScraper\\Tests\\": "tests/"
     }
   },
@@ -25,7 +36,10 @@
     "phpunit/phpunit": "^12.0",
     "laravel/pint": "^1.2",
     "phpstan/phpstan": "^2.0",
-    "symfony/css-selector": "^7.4",
-    "phpunit/php-code-coverage": "^12.5"
+    "symfony/css-selector": "^7.4"
+  },
+  "config": {
+    "sort-packages": true,
+    "optimize-autoloader": true
   }
 }
