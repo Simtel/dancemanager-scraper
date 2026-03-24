@@ -8,21 +8,30 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Simtel\DanceManagerScraper\Interface\TournamentGroupScraperInterface;
 use Symfony\Component\DomCrawler\Crawler;
 
-class TournamentGroupScrapper
+class TournamentGroupScrapper implements TournamentGroupScraperInterface
 {
     private LoggerInterface $logger;
 
-    private string $partUrl = 'https://dancemanager.ru/part?eventGuid=%s8&partGuid=%s&isShowUnconfirmed=1';
+    private string $baseUrl = 'https://dancemanager.ru';
+
+    private string $partUrlPath = '/part?eventGuid=%s&partGuid=%s&isShowUnconfirmed=1';
 
     /**
      * @param Client $client
      * @param LoggerInterface|null $logger
      */
-    public function __construct(private readonly Client $client, ?LoggerInterface $logger)
-    {
+    public function __construct(
+        private readonly Client $client,
+        ?LoggerInterface $logger = null,
+        ?string $baseUrl = null,
+    ) {
         $this->logger = $logger ?? new NullLogger();
+        if ($baseUrl !== null) {
+            $this->baseUrl = $baseUrl;
+        }
     }
 
     public function setLogger(LoggerInterface $logger): void
@@ -61,7 +70,7 @@ class TournamentGroupScrapper
 
     private function getPartUrl(string $eventGuid, string $partGuid): string
     {
-        return sprintf($this->partUrl, $eventGuid, $partGuid);
+        return $this->baseUrl . sprintf($this->partUrlPath, $eventGuid, $partGuid);
     }
 
     /**

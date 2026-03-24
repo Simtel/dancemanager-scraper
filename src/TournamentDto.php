@@ -8,8 +8,8 @@ readonly class TournamentDto
 {
     public function __construct(
         private string $title,
-        private mixed $date,
-        private mixed $dateEnd,
+        private string $date,
+        private ?string $dateEnd,
         private string $link,
         private ?string $city,
         private ?string $organizer,
@@ -21,12 +21,12 @@ readonly class TournamentDto
         return $this->title;
     }
 
-    public function getDate(): mixed
+    public function getDate(): string
     {
         return $this->date;
     }
 
-    public function getDateEnd(): mixed
+    public function getDateEnd(): ?string
     {
         return $this->dateEnd;
     }
@@ -63,7 +63,7 @@ readonly class TournamentDto
     }
 
     /**
-     * @return array{title: string, date: mixed, date_end: mixed, link: string, city: ?string, organizer: ?string}
+     * @return array{title: string, date: string, date_end: ?string, link: string, city: ?string, organizer: ?string}
      */
     public function toArray(): array
     {
@@ -78,7 +78,7 @@ readonly class TournamentDto
     }
 
     /**
-     * @param array{title: string, date: mixed, date_end: mixed, link: non-falsy-string, city: ?string, organizer: ?string} $data
+     * @param array{title: string, date: string, date_end: ?string, link: non-falsy-string, city: ?string, organizer: ?string} $data
      */
     public static function fromArray(array $data): self
     {

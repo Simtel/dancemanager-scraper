@@ -6,14 +6,19 @@ namespace Simtel\DanceManagerScraper;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
+use Simtel\DanceManagerScraper\Interface\TournamentScraperInterface;
 use Symfony\Component\DomCrawler\Crawler;
 
-class DancemanagerScraper
+class DancemanagerScraper implements TournamentScraperInterface
 {
     protected string $baseUrl = 'https://dancemanager.ru';
 
-    public function __construct(private readonly Client $client)
-    {
+    public function __construct(
+        private readonly Client $client,
+        private readonly LoggerInterface $logger = new NullLogger(),
+    ) {
     }
 
     /**
@@ -31,7 +36,7 @@ class DancemanagerScraper
     }
 
     /**
-     * @return list<array{title: string, date: mixed, date_end: mixed, link: non-falsy-string, city: ?string, organizer: ?string}>
+     * @return list<array{title: string, date: string, date_end: ?string, link: non-falsy-string, city: ?string, organizer: ?string}>
      * @throws GuzzleException
      */
     private function fetchTournaments(): array
@@ -39,36 +44,13 @@ class DancemanagerScraper
         $tournaments = [];
 
         $url = $this->baseUrl;
+        $this->logger->info("Fetching tournaments from: $url");
+
         $response = $this->client->get($url);
         $html = $response->getBody()->getContents();
         $crawler = new Crawler($html);
 
-        $events = $crawler->filter('div[id^="event_"]');
-
-        foreach ($events as $eventDiv) {
-            $eventNode = new Crawler($eventDiv);
-            /** @var string $eventId */
-            $eventId = $eventNode->attr('id');
-            $guid = str_replace('event_', '', $eventId);
-
-            $title = trim($eventNode->text());
-            $link = $this->baseUrl . '/competitions?guid=' . $guid;
-
-            $information = $eventNode->nextAll()->eq(0)->text();
-
-            $info = $this->splitLocationAndName($information);
-
-            $dates = $this->extractDatesFromCompetitionPage($link);
-
-            $tournaments[] = [
-                'title' => $title,
-                'date' => $dates['start'] ?? 'N/A',
-                'date_end' => $dates['end'] ?? null,
-                'link' => $link,
-                'city' => $info['city'] !== '' ? $info['city'] : null,
-                'organizer' => $info['organizer'] !== '' ? $info['organizer'] : null,
-            ];
-        }
+        $tournaments = array_merge($tournaments, $this->parseEventsFromCrawler($crawler));
 
         $nextPageExists = $crawler->filter('li.page-item a.page-link:contains("»")')->count() > 0;
 
@@ -82,43 +64,19 @@ class DancemanagerScraper
 
                 while ($pageNum <= 10) {
                     $paginatedUrl = $this->baseUrl . '/?page' . $pageParam . '=' . $pageNum;
+                    $this->logger->info("Fetching page: $paginatedUrl");
 
                     $response = $this->client->get($paginatedUrl);
                     $html = $response->getBody()->getContents();
                     $crawler = new Crawler($html);
 
-                    $events = $crawler->filter('div[id^="event_"]');
+                    $pageEvents = $this->parseEventsFromCrawler($crawler);
 
-                    if ($events->count() === 0) {
+                    if (empty($pageEvents)) {
                         break;
                     }
 
-                    foreach ($events as $eventDiv) {
-                        $eventNode = new Crawler($eventDiv);
-                        $eventId = $eventNode->attr('id');
-                        if ($eventId === null) {
-                            continue;
-                        }
-                        $guid = str_replace('event_', '', $eventId);
-
-                        $title = trim($eventNode->text());
-                        $link = $this->baseUrl . '/competitions?guid=' . $guid;
-
-                        $information = $eventNode->nextAll()->eq(0)->text();
-
-                        $info = $this->splitLocationAndName($information);
-
-                        $dates = $this->extractDatesFromCompetitionPage($link);
-
-                        $tournaments[] = [
-                            'title' => $title,
-                            'date' => $dates['start'] ?? 'N/A',
-                            'date_end' => $dates['end'] ?? null,
-                            'link' => $link,
-                            'city' => $info['city'] !== '' ? $info['city'] : null,
-                            'organizer' => $info['organizer'] !== '' ? $info['organizer'] : null,
-                        ];
-                    }
+                    $tournaments = array_merge($tournaments, $pageEvents);
 
                     $nextPageExists = $crawler->filter('li.page-item a.page-link:contains("»")')->count() > 0;
                     if (!$nextPageExists) {
@@ -163,7 +121,48 @@ class DancemanagerScraper
             return strcmp($a['title'], $b['title']);
         });
 
+        $this->logger->info('Total tournaments found: ' . count($uniqueTournaments));
+
         return $uniqueTournaments;
+    }
+
+    /**
+     * @return list<array{title: string, date: string, date_end: ?string, link: non-falsy-string, city: ?string, organizer: ?string}>
+     * @throws GuzzleException
+     */
+    private function parseEventsFromCrawler(Crawler $crawler): array
+    {
+        $tournaments = [];
+        $events = $crawler->filter('div[id^="event_"]');
+
+        foreach ($events as $eventDiv) {
+            $eventNode = new Crawler($eventDiv);
+            $eventId = $eventNode->attr('id');
+            if ($eventId === null) {
+                continue;
+            }
+            $guid = str_replace('event_', '', $eventId);
+
+            $title = trim($eventNode->text());
+            $link = $this->baseUrl . '/competitions?guid=' . $guid;
+
+            $information = $eventNode->nextAll()->eq(0)->text();
+
+            $info = $this->splitLocationAndName($information);
+
+            $dates = $this->extractDatesFromCompetitionPage($link);
+
+            $tournaments[] = [
+                'title' => $title,
+                'date' => $dates['start'] ?? 'N/A',
+                'date_end' => $dates['end'] ?? null,
+                'link' => $link,
+                'city' => $info['city'] !== '' ? $info['city'] : null,
+                'organizer' => $info['organizer'] !== '' ? $info['organizer'] : null,
+            ];
+        }
+
+        return $tournaments;
     }
 
     /**
@@ -217,8 +216,12 @@ class DancemanagerScraper
                 return ['start' => $date, 'end' => null];
             }
 
+            $this->logger->warning("No dates found on page: $url");
+
             return ['start' => null, 'end' => null];
         } catch (\Exception $e) {
+            $this->logger->error("Failed to extract dates from $url: " . $e->getMessage());
+
             return ['start' => null, 'end' => null];
         }
     }

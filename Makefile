@@ -8,7 +8,7 @@ pint: ##Run pint analyse
 	./vendor/bin/pint --parallel
 
 install:
-	compsoer instal
+	composer install
 
 test-coverage: ## Run PHPUnit tests with coverage
 	XDEBUG_MODE=coverage ./vendor/bin/phpunit --coverage-html build/coverage/html --coverage-text
