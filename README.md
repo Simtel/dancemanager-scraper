@@ -63,25 +63,43 @@ foreach ($tournaments as $tournament) {
 ### Установка зависимостей
 
 ```bash
-make install
+composer run post-install
 ```
 
 ### Запуск тестов
 
 ```bash
-./vendor/bin/phpunit
+composer test
+```
+
+### Запуск тестов с покрытием
+
+```bash
+composer test:coverage
 ```
 
 ### Статический анализ (PHPStan)
 
 ```bash
-make phpstan
+composer phpstan
 ```
 
 ### Форматирование кода (Pint)
 
 ```bash
-make pint
+composer pint
+```
+
+### Запуск линтеров (phpstan + pint)
+
+```bash
+composer lint
+```
+
+### Запуск всех проверок (тесты + линтеры)
+
+```bash
+composer check
 ```
 
 ## Лицензия

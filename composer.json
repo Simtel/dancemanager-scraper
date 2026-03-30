@@ -41,5 +41,14 @@
   "config": {
     "sort-packages": true,
     "optimize-autoloader": true
+  },
+  "scripts": {
+    "test": "phpunit --display-errors --no-coverage",
+    "test:coverage": "XDEBUG_MODE=coverage phpunit --coverage-html build/coverage/html --coverage-text",
+    "phpstan": "phpstan analyse --memory-limit=2G",
+    "pint": "pint --parallel",
+    "post-install": "composer install",
+    "lint": ["@phpstan", "@pint"],
+    "check": ["@test", "@phpstan", "@pint"]
   }
 }
