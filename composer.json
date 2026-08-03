@@ -17,7 +17,7 @@
   "prefer-stable": true,
   "require": {
     "php": ">=8.4",
-    "guzzlehttp/guzzle": "^7.0.1",
+    "guzzlehttp/guzzle": "^8.0.1",
     "symfony/dom-crawler": "^8.0",
     "psr/cache": "^3.0",
     "psr/log": "^3.0"
