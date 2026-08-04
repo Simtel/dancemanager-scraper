@@ -31,23 +31,29 @@ composer install
 
 ```php
 use GuzzleHttp\Client;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Simtel\DanceManagerScraper\DancemanagerScraper;
-use Simtel\DanceManagerScraper\TournamentGroupScrapper;
+use Simtel\DanceManagerScraper\Http\GuzzlePageFetcher;
+use Simtel\DanceManagerScraper\TournamentGroupScraper;
 
 $client = new Client();
 
+// Кэш — опционально. Без него каждая страница будет скачиваться заново.
+$cache = new FilesystemAdapter('dancemanager', 3600, __DIR__ . '/var/cache');
+$fetcher = new GuzzlePageFetcher($client, $cache);
+
 // Получение списка турниров
-$scraper = new DancemanagerScraper($client);
+$scraper = new DancemanagerScraper($fetcher);
 $tournaments = $scraper->getTournaments();
 
 foreach ($tournaments as $tournament) {
-    echo $tournament->getTitle() . ' - ' . $tournament->getDate() . "\n";
+    echo $tournament->getTitle() . ' - ' . ($tournament->getDate()?->format('d.m.Y') ?? 'N/A') . "\n";
     echo '  Город: ' . $tournament->getCity() . "\n";
     echo '  Организатор: ' . $tournament->getOrganizer() . "\n";
 }
 
 // Получение групп турнира
-$groupScraper = new TournamentGroupScrapper($client);
+$groupScraper = new TournamentGroupScraper($fetcher);
 
 foreach ($tournaments as $tournament) {
     $groups = $groupScraper->getGroups($tournament);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Simtel\DanceManagerScraper\Tests;
 
+use DateTimeImmutable;
 use Simtel\DanceManagerScraper\TournamentDto;
 
 class TournamentTest extends BaseTestCase
@@ -12,8 +13,8 @@ class TournamentTest extends BaseTestCase
     {
         $tournament = new TournamentDto(
             'Tournament',
-            '2026-03-01',
-            '2026-03-01',
+            new DateTimeImmutable('2026-03-01'),
+            new DateTimeImmutable('2026-03-01'),
             'https://example.com/competitions?guid=123',
             'Moscow',
             'Organizer'
@@ -28,8 +29,8 @@ class TournamentTest extends BaseTestCase
         $link = 'https://dancemanager.ru/competitions?guid=abc123';
         $tournament = new TournamentDto(
             'Tournament',
-            '2026-03-01',
-            '2026-03-01',
+            null,
+            null,
             $link,
             'Moscow',
             'Organizer'
@@ -43,8 +44,8 @@ class TournamentTest extends BaseTestCase
         $guid = 'test-guid-456';
         $tournament = new TournamentDto(
             'Tournament',
-            '2026-03-01',
-            '2026-03-01',
+            null,
+            null,
             'https://example.com?guid=' . $guid,
             'Moscow',
             'Organizer'

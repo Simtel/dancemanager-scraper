@@ -4,239 +4,147 @@ declare(strict_types=1);
 
 namespace Simtel\DanceManagerScraper;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
+use DateTimeImmutable;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Simtel\DanceManagerScraper\Http\PageFetcherInterface;
 use Simtel\DanceManagerScraper\Interface\TournamentScraperInterface;
-use Symfony\Component\DomCrawler\Crawler;
+use Simtel\DanceManagerScraper\Parser\DateParser;
+use Simtel\DanceManagerScraper\Parser\TournamentListParser;
 
 class DancemanagerScraper implements TournamentScraperInterface
 {
-    protected string $baseUrl = 'https://dancemanager.ru';
+    private const MAX_PAGES = 10;
 
     public function __construct(
-        private readonly Client $client,
+        private readonly PageFetcherInterface $fetcher,
+        private readonly DateParser $dateParser = new DateParser(),
+        private readonly TournamentListParser $listParser = new TournamentListParser(),
         private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly string $baseUrl = 'https://dancemanager.ru',
     ) {
     }
 
     /**
      * @return list<TournamentDto>
-     * @throws GuzzleException
      */
     public function getTournaments(): array
     {
-        $tournamentsArrays = $this->fetchTournaments();
+        $events = $this->collectEvents();
 
-        return array_map(
-            static fn (array $data): TournamentDto => TournamentDto::fromArray($data),
-            $tournamentsArrays
-        );
-    }
+        $tournaments = $this->buildTournaments($events);
 
-    /**
-     * @return list<array{title: string, date: string, date_end: ?string, link: non-falsy-string, city: ?string, organizer: ?string}>
-     * @throws GuzzleException
-     */
-    private function fetchTournaments(): array
-    {
-        $tournaments = [];
+        usort($tournaments, self::sortByDate(...));
 
-        $url = $this->baseUrl;
-        $this->logger->info("Fetching tournaments from: $url");
-
-        $response = $this->client->get($url);
-        $html = $response->getBody()->getContents();
-        $crawler = new Crawler($html);
-
-        $tournaments = array_merge($tournaments, $this->parseEventsFromCrawler($crawler));
-
-        $nextPageExists = $crawler->filter('li.page-item a.page-link:contains("»")')->count() > 0;
-
-        if ($nextPageExists) {
-            $nextPageElement = $crawler->filter('li.page-item a.page-link:contains("»")')->first();
-            $nextPageHref = $nextPageElement->attr('href');
-
-            if (is_string($nextPageHref) && preg_match('/page(\d+)=([2-9]\d*)/', $nextPageHref, $matches)) {
-                $pageNum = $matches[2];
-                $pageParam = $matches[1];
-
-                while ($pageNum <= 10) {
-                    $paginatedUrl = $this->baseUrl . '/?page' . $pageParam . '=' . $pageNum;
-                    $this->logger->info("Fetching page: $paginatedUrl");
-
-                    $response = $this->client->get($paginatedUrl);
-                    $html = $response->getBody()->getContents();
-                    $crawler = new Crawler($html);
-
-                    $pageEvents = $this->parseEventsFromCrawler($crawler);
-
-                    if (empty($pageEvents)) {
-                        break;
-                    }
-
-                    $tournaments = array_merge($tournaments, $pageEvents);
-
-                    $nextPageExists = $crawler->filter('li.page-item a.page-link:contains("»")')->count() > 0;
-                    if (!$nextPageExists) {
-                        break;
-                    }
-
-                    $pageNum++;
-                }
-            }
-        }
-
-        $uniqueTournaments = [];
-        $seenGuids = [];
-
-        foreach ($tournaments as $tournament) {
-            $query = parse_url($tournament['link'], PHP_URL_QUERY);
-            if (!is_string($query)) {
-                continue;
-            }
-            $guid = basename($query);
-            $guid = str_replace('guid=', '', $guid);
-
-            if (!isset($seenGuids[$guid])) {
-                $seenGuids[$guid] = true;
-                $uniqueTournaments[] = $tournament;
-            }
-        }
-
-        usort($uniqueTournaments, static function ($a, $b) {
-            if ($a['date'] !== 'N/A' && $b['date'] !== 'N/A') {
-                return strtotime($a['date']) - strtotime($b['date']);
-            }
-
-            if ($a['date'] !== 'N/A') {
-                return -1;
-            }
-
-            if ($b['date'] !== 'N/A') {
-                return 1;
-            }
-
-            return strcmp($a['title'], $b['title']);
-        });
-
-        $this->logger->info('Total tournaments found: ' . count($uniqueTournaments));
-
-        return $uniqueTournaments;
-    }
-
-    /**
-     * @return list<array{title: string, date: string, date_end: ?string, link: non-falsy-string, city: ?string, organizer: ?string}>
-     * @throws GuzzleException
-     */
-    private function parseEventsFromCrawler(Crawler $crawler): array
-    {
-        $tournaments = [];
-        $events = $crawler->filter('div[id^="event_"]');
-
-        foreach ($events as $eventDiv) {
-            $eventNode = new Crawler($eventDiv);
-            $eventId = $eventNode->attr('id');
-            if ($eventId === null) {
-                continue;
-            }
-            $guid = str_replace('event_', '', $eventId);
-
-            $title = trim($eventNode->text());
-            $link = $this->baseUrl . '/competitions?guid=' . $guid;
-
-            $information = $eventNode->nextAll()->eq(0)->text();
-
-            $info = $this->splitLocationAndName($information);
-
-            $dates = $this->extractDatesFromCompetitionPage($link);
-
-            $tournaments[] = [
-                'title' => $title,
-                'date' => $dates['start'] ?? 'N/A',
-                'date_end' => $dates['end'] ?? null,
-                'link' => $link,
-                'city' => $info['city'] !== '' ? $info['city'] : null,
-                'organizer' => $info['organizer'] !== '' ? $info['organizer'] : null,
-            ];
-        }
+        $this->logger->info('Total tournaments found: ' . count($tournaments));
 
         return $tournaments;
     }
 
     /**
-     * @param string $url
-     * @return array{start: string|null, end: string|null}
-     * @throws GuzzleException
+     * @return array<string, array{guid: string, title: string, city: string|null, organizer: string|null}>
      */
-    public function extractDatesFromCompetitionPage(string $url): array
+    private function collectEvents(): array
     {
-        try {
-            $response = $this->client->get($url);
-            $html = $response->getBody()->getContents();
-            $crawler = new Crawler($html);
+        $events = [];
 
-            $content = $crawler->filter('body')->html();
+        $listHtml = $this->fetcher->fetchHtml($this->baseUrl);
+        $this->mergeEvents($events, $listHtml);
 
-            $monthMap = [
-                'января' => '01',
-                'февраля' => '02',
-                'марта' => '03',
-                'апреля' => '04',
-                'мая' => '05',
-                'июня' => '06',
-                'июля' => '07',
-                'августа' => '08',
-                'сентября' => '09',
-                'октября' => '10',
-                'ноября' => '11',
-                'декабря' => '12',
-            ];
+        $nextPage = $this->listParser->nextPageInfo($listHtml);
 
+        if ($nextPage === null) {
+            return $events;
+        }
 
-            $twoDatesPattern = '/\b(0?[1-9]|[12][0-9]|3[01])[\.\/\-](0?[1-9]|1[0-2])[\.\/\-](\d{4})\s*<br>\s*(0?[1-9]|[12][0-9]|3[01])[\.\/\-](0?[1-9]|1[0-2])[\.\/\-](\d{4})\b/i';
-            if (preg_match($twoDatesPattern, $content, $matches)) {
-                return [
-                    'start' => sprintf('%02d.%02d.%s', (int)$matches[1], (int)$matches[2], $matches[3]),
-                    'end' => sprintf('%02d.%02d.%s', (int)$matches[4], (int)$matches[5], $matches[6]),
-                ];
+        $pageNum = $nextPage['pageNum'];
+        $pageParam = $nextPage['pageParam'];
+
+        while ($pageNum <= self::MAX_PAGES) {
+            $url = $this->baseUrl . '/?page' . $pageParam . '=' . $pageNum;
+            $this->logger->info("Fetching page: $url");
+
+            $html = $this->fetcher->fetchHtml($url);
+            $this->mergeEvents($events, $html);
+
+            if (!$this->listParser->hasNextPage($html)) {
+                break;
             }
 
-            $dmyPattern = '/\b(0?[1-9]|[12][0-9]|3[01])[\.\/\-](0?[1-9]|1[0-2])[\.\/\-](\d{4})\b/';
-            if (preg_match($dmyPattern, $content, $matches)) {
-                $date = sprintf('%02d.%02d.%s', (int)$matches[1], (int)$matches[2], $matches[3]);
-                return ['start' => $date, 'end' => null];
-            }
+            $pageNum++;
+        }
 
-            $dayMonthYearPattern = '/\b(0?[1-9]|[12][0-9]|3[01])\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(\d{4})\b/i';
-            if (preg_match($dayMonthYearPattern, $content, $matches)) {
-                $month = $monthMap[mb_strtolower($matches[2])] ?? '01';
-                $date = sprintf('%02d.%02d.%s', (int)$matches[1], (int)$month, $matches[3]);
-                return ['start' => $date, 'end' => null];
-            }
+        return $events;
+    }
 
-            $this->logger->warning("No dates found on page: $url");
-
-            return ['start' => null, 'end' => null];
-        } catch (\Exception $e) {
-            $this->logger->error("Failed to extract dates from $url: " . $e->getMessage());
-
-            return ['start' => null, 'end' => null];
+    /**
+     * @param array<string, array{guid: string, title: string, city: string|null, organizer: string|null}> $events
+     */
+    private function mergeEvents(array &$events, string $html): void
+    {
+        foreach ($this->listParser->parseEvents($html) as $event) {
+            $events[$event['guid']] = $event;
         }
     }
 
     /**
-     * @param string $input
-     * @return array{city: string, organizer: string}
+     * @param array<string, array{guid: string, title: string, city: string|null, organizer: string|null}> $events
+     * @return list<TournamentDto>
      */
-    public function splitLocationAndName(string $input): array
+    private function buildTournaments(array $events): array
     {
-        $parts = explode(',', $input, 2);
+        if ($events === []) {
+            return [];
+        }
 
-        return [
-            'city' => trim($parts[0]),
-            'organizer' => isset($parts[1]) ? trim($parts[1]) : '',
-        ];
+        $urlByGuid = [];
+        foreach ($events as $guid => $event) {
+            $urlByGuid[$guid] = $this->competitionUrl($guid);
+        }
+
+        $pages = $this->fetcher->fetchHtmlPool(array_values($urlByGuid));
+        $idx = 0;
+
+        $tournaments = [];
+        foreach ($events as $guid => $event) {
+            $dates = $this->dateParser->parse($pages[$idx]);
+            $idx++;
+
+            $tournaments[] = new TournamentDto(
+                title: $event['title'],
+                date: $dates['start'],
+                dateEnd: $dates['end'],
+                link: $urlByGuid[$guid],
+                city: $event['city'],
+                organizer: $event['organizer'],
+            );
+        }
+
+        return $tournaments;
+    }
+
+    private function competitionUrl(string $guid): string
+    {
+        return $this->baseUrl . '/competitions?guid=' . $guid;
+    }
+
+    private static function sortByDate(TournamentDto $a, TournamentDto $b): int
+    {
+        $dateA = $a->getDate();
+        $dateB = $b->getDate();
+
+        if ($dateA instanceof DateTimeImmutable && $dateB instanceof DateTimeImmutable) {
+            return $dateA <=> $dateB;
+        }
+
+        if ($dateA instanceof DateTimeImmutable) {
+            return -1;
+        }
+
+        if ($dateB instanceof DateTimeImmutable) {
+            return 1;
+        }
+
+        return strcmp($a->getTitle(), $b->getTitle());
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Simtel\DanceManagerScraper\Tests;
 
+use DateTimeImmutable;
 use Simtel\DanceManagerScraper\TournamentDto;
 
 class TournamentDtoTest extends BaseTestCase
@@ -12,28 +13,27 @@ class TournamentDtoTest extends BaseTestCase
     {
         $dto = new TournamentDto(
             title: 'World Cup 2025',
-            date: '2025-06-10',
-            dateEnd: '2025-06-12',
+            date: new DateTimeImmutable('2025-06-10'),
+            dateEnd: new DateTimeImmutable('2025-06-12'),
             link: 'https://example.com/tournament/123',
             city: 'Berlin',
             organizer: 'Dancemanager'
         );
 
+        $this->assertEquals(new DateTimeImmutable('2025-06-10'), $dto->getDate());
+        $this->assertEquals(new DateTimeImmutable('2025-06-12'), $dto->getDateEnd());
         $this->assertSame('World Cup 2025', $dto->getTitle());
-        $this->assertSame('2025-06-10', $dto->getDate());
-        $this->assertSame('2025-06-12', $dto->getDateEnd());
         $this->assertSame('Berlin', $dto->getCity());
         $this->assertSame('https://example.com/tournament/123', $dto->getLink());
         $this->assertSame('Dancemanager', $dto->getOrganizer());
     }
 
-
     public function testToArray(): void
     {
         $dto = new TournamentDto(
             title: 'Euro Dance 2025',
-            date: '2025-07-05',
-            dateEnd: '2025-07-07',
+            date: new DateTimeImmutable('2025-07-05'),
+            dateEnd: new DateTimeImmutable('2025-07-07'),
             link: 'https://example.com/eurodance',
             city: 'Rome',
             organizer: 'Dancemanager'
@@ -51,14 +51,12 @@ class TournamentDtoTest extends BaseTestCase
         $this->assertSame($expected, $dto->toArray());
     }
 
-
-
     public function testEquality(): void
     {
         $dto1 = new TournamentDto(
             title: 'Same Event',
-            date: '2025-08-01',
-            dateEnd: '2025-08-03',
+            date: new DateTimeImmutable('2025-08-01'),
+            dateEnd: new DateTimeImmutable('2025-08-03'),
             link: 'https://example.com/same',
             city: 'Warsaw',
             organizer: 'Dancemanager'
@@ -66,8 +64,8 @@ class TournamentDtoTest extends BaseTestCase
 
         $dto2 = new TournamentDto(
             title: 'Same Event',
-            date: '2025-08-01',
-            dateEnd: '2025-08-03',
+            date: new DateTimeImmutable('2025-08-01'),
+            dateEnd: new DateTimeImmutable('2025-08-03'),
             link: 'https://example.com/same',
             city: 'Warsaw',
             organizer: 'Dancemanager'
@@ -91,8 +89,8 @@ class TournamentDtoTest extends BaseTestCase
 
         $this->assertInstanceOf(TournamentDto::class, $dto);
         $this->assertSame('World Cup 2025', $dto->getTitle());
-        $this->assertSame('2025-06-10', $dto->getDate());
-        $this->assertSame('2025-06-12', $dto->getDateEnd());
+        $this->assertEquals(new DateTimeImmutable('2025-06-10'), $dto->getDate());
+        $this->assertEquals(new DateTimeImmutable('2025-06-12'), $dto->getDateEnd());
         $this->assertSame('https://example.com/tournament/123', $dto->getLink());
         $this->assertSame('Berlin', $dto->getCity());
         $this->assertSame('Dance Org', $dto->getOrganizer());
